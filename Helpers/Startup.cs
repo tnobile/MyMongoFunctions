@@ -22,10 +22,14 @@ namespace MyNotes.Functions.Helpers
                 loggingBuilder.AddFilter(level => true);
             });
 
+            builder.Services.Configure<IConfiguration>(c=>{
+                var b =c;
+            });
             var config = (IConfiguration)builder.Services.First(d => d.ServiceType == typeof(IConfiguration)).ImplementationInstance;
 
             builder.Services.AddSingleton((s) =>
             {
+                var c = config;
                 return new MongoClient(Environment.GetEnvironmentVariable(Settings.MONGO_CONNECTION_STRING));
             });
         }
