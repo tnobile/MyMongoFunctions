@@ -12,7 +12,7 @@ using MyNotes.Functions.Models;
 
 namespace MyNotes.Functions
 {
-    public class GetNotes
+    public class GetNote
     {
         private readonly MongoClient _mongoClient;
         private readonly ILogger _logger;
@@ -20,9 +20,9 @@ namespace MyNotes.Functions
 
         private readonly IMongoCollection<Note> _notes;
 
-        public GetNotes(
+        public GetNote(
             MongoClient mongoClient,
-            ILogger<GetNotes> logger,
+            ILogger<GetNote> logger,
             IConfiguration config)
         {
             _mongoClient = mongoClient;
@@ -33,12 +33,34 @@ namespace MyNotes.Functions
             _notes = database.GetCollection<Note>(Environment.GetEnvironmentVariable(Settings.COLLECTION_NAME));
         }
 
-        [FunctionName(nameof(GetNotes))]
+        [FunctionName(nameof(GetNote))]
         public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "note")] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "note/{id}")] HttpRequest req, string id,
             ILogger log)
         {
-            return new OkObjectResult(await _notes.Find(f => true).ToListAsync());
+           IActionResult returnValue = null;
+
+            try
+            {
+                var result = await _notes.Find(note=> note.Id == id).FirstOrDefaultAsync();
+
+                if (result == null)
+                {
+                    _logger.LogWarning("That item doesn't exist!");
+                    returnValue = new NotFoundResult();
+                }
+                else
+                {
+                    returnValue = new OkObjectResult(result);
+                }               
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Couldn't find note with id: {id}. Exception thrown: {ex.Message}");
+                returnValue = new StatusCodeResult(StatusCodes.Status500InternalServerError);
+            }
+
+            return returnValue; 
         }
     }
 }

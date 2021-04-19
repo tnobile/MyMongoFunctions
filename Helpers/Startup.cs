@@ -1,4 +1,3 @@
-using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,6 +8,7 @@ using MyNotes.Functions.Helpers;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
+using System.IO;
 
 [assembly: WebJobsStartup(typeof(Startup))]
 namespace MyNotes.Functions.Helpers
@@ -17,19 +17,17 @@ namespace MyNotes.Functions.Helpers
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
-             builder.Services.AddLogging(loggingBuilder =>
-            {
-                loggingBuilder.AddFilter(level => true);
-            });
+              var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()
+                .Build();
 
-            builder.Services.Configure<IConfiguration>(c=>{
-                var b =c;
-            });
-            var config = (IConfiguration)builder.Services.First(d => d.ServiceType == typeof(IConfiguration)).ImplementationInstance;
+            builder.Services.AddSingleton<IConfiguration>(config);
 
             builder.Services.AddSingleton((s) =>
             {
-                var c = config;
+                var c = config[Settings.MONGO_CONNECTION_STRING];
                 return new MongoClient(Environment.GetEnvironmentVariable(Settings.MONGO_CONNECTION_STRING));
             });
         }
