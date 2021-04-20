@@ -7,6 +7,7 @@ using MyNotes.Functions.Models;
 
 namespace MyMongoFunctions.Services
 {
+    // https://willvelida.medium.com/creating-a-web-api-with-azure-functions-azure-cosmos-db-mongodb-api-and-c-9bd8d528405a
     public interface INoteService
     {
         Task CreateNote(Note note);
