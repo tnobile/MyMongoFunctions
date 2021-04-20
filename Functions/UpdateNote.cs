@@ -4,35 +4,27 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using MongoDB.Driver;
 using Microsoft.Extensions.Configuration;
 using System;
-using MongoFunctions.Helpers;
 using MyNotes.Functions.Models;
 using Newtonsoft.Json;
 using System.IO;
+using MyMongoFunctions.Services;
 
 namespace MyNotes.Functions
 {
-    public class UpdateNote 
+    public class UpdateNote
     {
-        private readonly MongoClient _mongoClient;
-        private readonly ILogger _logger;
-        private readonly IConfiguration _config;
-
-        private readonly IMongoCollection<Note> _notes;
+        private readonly ILogger<UpdateNote> _logger;
+        private readonly INoteService _service;
 
         public UpdateNote(
-            MongoClient mongoClient,
-            ILogger<GetNote> logger,
+            INoteService service,
+            ILogger<UpdateNote> logger,
             IConfiguration config)
         {
-            _mongoClient = mongoClient;
+            _service = service;
             _logger = logger;
-            _config = config;
-
-            var database = _mongoClient.GetDatabase(Environment.GetEnvironmentVariable(Settings.DATABASE_NAME));
-            _notes = database.GetCollection<Note>(Environment.GetEnvironmentVariable(Settings.COLLECTION_NAME));
         }
 
         [FunctionName(nameof(UpdateNote))]
@@ -40,7 +32,7 @@ namespace MyNotes.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "note/{id}")] HttpRequest req, string id,
             ILogger log)
         {
-           IActionResult returnValue = null;
+            IActionResult returnValue = null;
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
@@ -50,16 +42,16 @@ namespace MyNotes.Functions
 
             try
             {
-                var replacedItem = await _notes.ReplaceOneAsync(album => album.Id == id, updatedResult);
+                var result= await _service.UpdateBook(id, updatedResult);
 
-                if (replacedItem == null)
+                if (result.ModifiedCount!=1)
                 {
                     returnValue = new NotFoundResult();
                 }
                 else
                 {
                     returnValue = new OkObjectResult(updatedResult);
-                }              
+                }
             }
             catch (Exception ex)
             {

@@ -4,33 +4,24 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using MongoDB.Driver;
 using Microsoft.Extensions.Configuration;
 using System;
-using MongoFunctions.Helpers;
-using MyNotes.Functions.Models;
+using MyMongoFunctions.Services;
 
 namespace MyNotes.Functions
 {
     public class DeleteNote
     {
-        private readonly MongoClient _mongoClient;
-        private readonly ILogger _logger;
-        private readonly IConfiguration _config;
-
-        private readonly IMongoCollection<Note> _notes;
+        private readonly ILogger<DeleteNote> _logger;
+        private readonly INoteService _service;
 
         public DeleteNote(
-            MongoClient mongoClient,
-            ILogger<GetNote> logger,
+            INoteService service,
+            ILogger<DeleteNote> logger,
             IConfiguration config)
         {
-            _mongoClient = mongoClient;
+            _service = service;
             _logger = logger;
-            _config = config;
-
-            var database = _mongoClient.GetDatabase(Environment.GetEnvironmentVariable(Settings.DATABASE_NAME));
-            _notes = database.GetCollection<Note>(Environment.GetEnvironmentVariable(Settings.COLLECTION_NAME));
         }
 
         [FunctionName(nameof(DeleteNote))]
@@ -38,27 +29,23 @@ namespace MyNotes.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "note/{id}")] HttpRequest req, string id,
             ILogger log)
         {
-            IActionResult returnValue = null;
-
             try
             {
-                var result = await _notes.DeleteManyAsync(n => n.Id == id);
+                var result = await _service.RemoveNoteById(id);
 
-                if (result == null)
+                if (result.DeletedCount!=1)
                 {
                     _logger.LogInformation($"Album with id: {id} does not exist. Delete failed");
-                    returnValue = new StatusCodeResult(StatusCodes.Status404NotFound);
+                    return new StatusCodeResult(StatusCodes.Status404NotFound);
                 }
 
-                returnValue = new StatusCodeResult(StatusCodes.Status200OK);
+                return new StatusCodeResult(StatusCodes.Status200OK);
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Couldn't find note with id: {id}. Exception thrown: {ex.Message}");
-                returnValue = new StatusCodeResult(StatusCodes.Status500InternalServerError);
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
-
-            return returnValue;
         }
     }
 }

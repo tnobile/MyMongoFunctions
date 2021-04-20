@@ -7,33 +7,24 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using MongoDB.Driver;
 using Microsoft.Extensions.Configuration;
-using MongoFunctions.Helpers;
 using MyNotes.Functions.Models;
+using MyMongoFunctions.Services;
 
 namespace MyNotes.Functions
 {
     public class CreateNote
     {
-
-        private readonly MongoClient _mongoClient;
-        private readonly ILogger _logger;
-        private readonly IConfiguration _config;
-
-        private readonly IMongoCollection<Note> _notes;
+        private readonly ILogger<CreateNote> _logger;
+        private readonly INoteService _service;
 
         public CreateNote(
-            MongoClient mongoClient,
-            ILogger<GetNotes> logger,
+            INoteService service,
+            ILogger<CreateNote> logger,
             IConfiguration config)
         {
-            _mongoClient = mongoClient;
+            _service = service;
             _logger = logger;
-            _config = config;
-
-            var database = _mongoClient.GetDatabase(Environment.GetEnvironmentVariable(Settings.DATABASE_NAME));
-            _notes = database.GetCollection<Note>(Environment.GetEnvironmentVariable(Settings.COLLECTION_NAME));
         }
 
         [FunctionName(nameof(CreateNote))]
@@ -41,13 +32,11 @@ namespace MyNotes.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "note")] HttpRequest req,
             ILogger log)
         {
-            IActionResult returnValue = null;
-
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
             var input = JsonConvert.DeserializeObject<Note>(requestBody);
 
-            var album = new Note
+            var note= new Note
             {
                 Word = input.Word,
                 Category = input.Category,
@@ -56,17 +45,14 @@ namespace MyNotes.Functions
 
             try
             {
-                await _notes.InsertOneAsync(album);
-                returnValue = new OkObjectResult(album);
+                await _service.CreateNote(note);
+                return new OkObjectResult(note);
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Exception thrown: {ex.Message}");
-                returnValue = new StatusCodeResult(StatusCodes.Status500InternalServerError);
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
-
-
-            return returnValue;
         }
     }
 }

@@ -7,30 +7,22 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Microsoft.Extensions.Configuration;
 using System;
-using MongoFunctions.Helpers;
-using MyNotes.Functions.Models;
+using MyMongoFunctions.Services;
 
 namespace MyNotes.Functions
 {
     public class GetNote
     {
-        private readonly MongoClient _mongoClient;
-        private readonly ILogger _logger;
-        private readonly IConfiguration _config;
-
-        private readonly IMongoCollection<Note> _notes;
+        private readonly ILogger<GetNote> _logger;
+        private readonly INoteService _service;
 
         public GetNote(
-            MongoClient mongoClient,
+            INoteService service,
             ILogger<GetNote> logger,
             IConfiguration config)
         {
-            _mongoClient = mongoClient;
+            _service = service;
             _logger = logger;
-            _config = config;
-
-            var database = _mongoClient.GetDatabase(Environment.GetEnvironmentVariable(Settings.DATABASE_NAME));
-            _notes = database.GetCollection<Note>(Environment.GetEnvironmentVariable(Settings.COLLECTION_NAME));
         }
 
         [FunctionName(nameof(GetNote))]
@@ -38,29 +30,25 @@ namespace MyNotes.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "note/{id}")] HttpRequest req, string id,
             ILogger log)
         {
-           IActionResult returnValue = null;
-
             try
             {
-                var result = await _notes.Find(note=> note.Id == id).FirstOrDefaultAsync();
+                var result = await _service.GetNote(id);
 
                 if (result == null)
                 {
                     _logger.LogWarning("That item doesn't exist!");
-                    returnValue = new NotFoundResult();
+                    return new NotFoundResult();
                 }
                 else
                 {
-                    returnValue = new OkObjectResult(result);
-                }               
+                    return new OkObjectResult(result);
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Couldn't find note with id: {id}. Exception thrown: {ex.Message}");
-                returnValue = new StatusCodeResult(StatusCodes.Status500InternalServerError);
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
-
-            return returnValue; 
         }
     }
 }

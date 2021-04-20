@@ -4,33 +4,25 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using MongoDB.Driver;
 using Microsoft.Extensions.Configuration;
 using System;
-using MongoFunctions.Helpers;
-using MyNotes.Functions.Models;
+using MyMongoFunctions.Services;
+using System.Linq;
 
 namespace MyNotes.Functions
 {
     public class GetNotes
     {
-        private readonly MongoClient _mongoClient;
-        private readonly ILogger _logger;
-        private readonly IConfiguration _config;
-
-        private readonly IMongoCollection<Note> _notes;
+        private readonly ILogger<GetNotes> _logger;
+        private readonly INoteService _service;
 
         public GetNotes(
-            MongoClient mongoClient,
+            INoteService service,
             ILogger<GetNotes> logger,
             IConfiguration config)
         {
-            _mongoClient = mongoClient;
+            _service = service;
             _logger = logger;
-            _config = config;
-
-            var database = _mongoClient.GetDatabase(config[Settings.DATABASE_NAME]);
-            _notes = database.GetCollection<Note>(config[Settings.COLLECTION_NAME]);
         }
 
         [FunctionName(nameof(GetNotes))]
@@ -38,7 +30,23 @@ namespace MyNotes.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "note")] HttpRequest req,
             ILogger log)
         {
-            return new OkObjectResult(await _notes.Find(f => true).ToListAsync());
+            try
+            {
+                var books = await _service.GetNotes();
+
+                if (!books.Any())
+                {
+                    _logger.LogWarning("No notes found!");
+                    return new StatusCodeResult(StatusCodes.Status404NotFound);
+                }
+
+                return new OkObjectResult(books);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Internal Server Error. Exception thrown: {ex.Message}");
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+            }
         }
     }
 }
