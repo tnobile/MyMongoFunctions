@@ -41,6 +41,7 @@ namespace MyNotes.Functions
                 Word = input.Word,
                 Category = input.Category,
                 Content = input.Content,
+                Status = input.Status
             };
 
             try

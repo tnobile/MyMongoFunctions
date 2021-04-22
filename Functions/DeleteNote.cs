@@ -35,7 +35,7 @@ namespace MyNotes.Functions
 
                 if (result.DeletedCount!=1)
                 {
-                    _logger.LogInformation($"Album with id: {id} does not exist. Delete failed");
+                    _logger.LogInformation($"Note with id: {id} does not exist. Delete failed");
                     return new StatusCodeResult(StatusCodes.Status404NotFound);
                 }
 
