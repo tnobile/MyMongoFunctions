@@ -27,13 +27,12 @@ namespace MyNotes.Functions
 
         [FunctionName(nameof(GetNote))]
         public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "note/{id}")] HttpRequest req, string id,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "note/{id:int}")] HttpRequest req, string id,
             ILogger log)
         {
             try
             {
                 var result = await _service.GetNote(id);
-
                 if (result == null)
                 {
                     _logger.LogWarning("That item doesn't exist!");

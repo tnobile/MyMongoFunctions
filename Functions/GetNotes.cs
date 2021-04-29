@@ -27,20 +27,23 @@ namespace MyNotes.Functions
 
         [FunctionName(nameof(GetNotes))]
         public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "note")] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "note/{category:alpha?}")] HttpRequest req,
+                string category,
             ILogger log)
         {
             try
             {
-                var books = await _service.GetNotes();
+                var notes = string.IsNullOrWhiteSpace(category) ?
+                    await _service.GetNotes() : await _service.GetNotes(category);
 
-                if (!books.Any())
+
+                if (!notes.Any())
                 {
                     _logger.LogWarning("No notes found!");
                     return new StatusCodeResult(StatusCodes.Status404NotFound);
                 }
 
-                return new OkObjectResult(books);
+                return new OkObjectResult(notes);
             }
             catch (Exception ex)
             {

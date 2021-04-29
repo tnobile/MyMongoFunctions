@@ -13,6 +13,7 @@ namespace MyMongoFunctions.Services
         Task CreateNote(Note note);
         Task<Note> GetNote(string id);
         Task<List<Note>> GetNotes();
+        Task<List<Note>> GetNotes(string cateogory);
         Task<DeleteResult> RemoveNote(Note note);
         Task<DeleteResult> RemoveNoteById(string id);
         Task<ReplaceOneResult> UpdateBook(string id, Note note);
@@ -43,7 +44,12 @@ namespace MyMongoFunctions.Services
 
         public async Task<List<Note>> GetNotes()
         {
-            return await _notes.Find(book => true).ToListAsync();
+            return await _notes.Find(_ => true).ToListAsync();
+        }
+
+        public async Task<List<Note>> GetNotes(string cateogory)
+        {
+            return await _notes.Find(note => note.Category == cateogory).ToListAsync();
         }
 
         public async Task<DeleteResult> RemoveNote(Note note)
